@@ -47,7 +47,6 @@ def preprocess_hotel_data(file_path):
         df['arrival_date_year'].astype(str) + '-' +
         df['arrival_date_month'].astype(str) + '-' +
         df['arrival_date_day_of_month'].astype(str),
-        format='%Y-%m-%d',
         errors='coerce'
     )
     
@@ -71,10 +70,14 @@ def preprocess_hotel_data(file_path):
     # 7. Convert boolean columns
     df['is_canceled'] = df['is_canceled'].astype(bool)
     df['is_repeated_guest'] = df['is_repeated_guest'].astype(bool)
+
+    # 8. Create derived columns
+    df['total_nights'] = df['stays_in_weekend_nights'] + df['stays_in_week_nights']
+    df['revenue'] = df['total_nights'] * df['adr']
     
     # 8. Save cleaned data
-    cleaned_file_path = file_path.replace('.csv', '_cleaned.csv')
-    df.to_csv(cleaned_file_path, index=False)
+    # cleaned_file_path = file_path.replace('.csv', '_cleaned.csv')
+    df.to_csv("processed_data.csv", index=False)  # Consistent filename
     
     return df
 
@@ -193,12 +196,17 @@ def rag_hotel_qa(df, query, use_gpu=False):
     # 1. Prepare data for vector store
     context_data = []
     for _, row in df.iterrows():
+        try:
+            arrival_date = pd.to_datetime(row['arrival_date']).strftime('%Y-%m-%d')
+        except:
+            arrival_date = "Unknown date"
+            
         context = (
             f"Hotel: {row['hotel']}, "
             f"Status: {'Canceled' if row['is_canceled'] else 'Not Canceled'}, "
             f"Country: {row['country']}, "
             f"Price: {row['adr']} EUR, "
-            f"Arrival: {row['arrival_date'].strftime('%Y-%m-%d')}, "
+            f"Arrival: {arrival_date}, "
             f"Nights: {row['total_nights']}, "
             f"Revenue: {row['revenue']} EUR"
         )
@@ -226,7 +234,7 @@ def rag_hotel_qa(df, query, use_gpu=False):
     context = "\n".join([context_data[i] for i in indices[0]])
     
     # 6. Load LLM
-    model_name = "facebook/opt-125m"
+    model_name = "EleutherAI/pythia-12m"
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     llm = pipeline(
         "text-generation",

@@ -33,9 +33,8 @@ class QuestionRequest(BaseModel):
 async def process_data(request: ProcessRequest = Body(...)):
     """Endpoint to preprocess and store data"""
     try:
-        df = pd.read_csv(request.file_path)
+        # Remove the redundant read_csv call
         processed_df = preprocess_hotel_data(request.file_path)
-        processed_df.to_csv(DATA_PATH, index=False)
         return {"status": "success", "message": "Data processed successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -48,7 +47,11 @@ async def ask_question(request: QuestionRequest = Body(...)):
             raise HTTPException(status_code=400, detail="Process data first")
             
         df = pd.read_csv(DATA_PATH)
-        df['arrival_date'] = pd.to_datetime(df['arrival_date'])
+        
+        # Ensure arrival_date is datetime type
+        if not pd.api.types.is_datetime64_any_dtype(df['arrival_date']):
+            df['arrival_date'] = pd.to_datetime(df['arrival_date'], errors='coerce')
+            
         response = rag_hotel_qa(df, request.question)
         return {
             "status": "success",
@@ -58,7 +61,7 @@ async def ask_question(request: QuestionRequest = Body(...)):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 @app.post("/analytics")
 async def get_analytics():
     """Endpoint to generate analytics reports"""

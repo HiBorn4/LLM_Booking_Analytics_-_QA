@@ -14,15 +14,6 @@ def main():
     # File upload section
     with st.expander("📁 Upload & Process Data"):
         uploaded_file = st.file_uploader("Upload hotel bookings CSV", type="csv")
-        # if uploaded_file:
-        #     with open("uploaded_data.csv", "wb") as f:
-        #         f.write(uploaded_file.getbuffer())
-        #     response = requests.post(f"{API_BASE}/process", json="uploaded_data.csv")
-        #     if response.status_code == 200:
-        #         st.success("Data processed successfully!")
-        #     else:
-        #         st.error(f"Error: {response.json()['detail']}")
-        # Modify the API calls in Streamlit to use proper request format
         if uploaded_file:
             with open("uploaded_data.csv", "wb") as f:
                 f.write(uploaded_file.getbuffer())
@@ -51,15 +42,15 @@ def main():
                 for plot_name in data['analytics']:
                     img_bytes = base64.b64decode(data['analytics'][plot_name])
                     img = mpimg.imread(BytesIO(img_bytes))
-                    st.image(img, caption=plot_name.replace('_', ' ').title(), use_column_width=True)
+                    st.image(img, 
+                           caption=plot_name.replace('_', ' ').title(), 
+                           use_container_width=True)  # Changed here
             else:
                 st.error(f"Error: {response.json()['detail']}")
     
     # Q&A Section
     with st.expander("❓ Ask Questions"):
         question = st.text_input("Ask about hotel bookings:")
-        # if question:
-        #     response = requests.post(f"{API_BASE}/ask", json=question)
         if question:
             response = requests.post(
                 f"{API_BASE}/ask",
